@@ -9,3 +9,5 @@ release.properties
 _site/
 user-manual/
 *.iml
+.idea
+core/dependency-reduced-pom.xml

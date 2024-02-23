@@ -35,6 +35,7 @@ import java.util.Date;
  * @author Jonathan Halterman
  */
 public final class Types {
+  public static volatile ProxyTargetFinder targetFinder = null;
   private static Class<?> JAVASSIST_PROXY_FACTORY_CLASS;
   private static Method JAVASSIST_IS_PROXY_CLASS_METHOD;
 
@@ -45,6 +46,15 @@ public final class Types {
       JAVASSIST_IS_PROXY_CLASS_METHOD = JAVASSIST_PROXY_FACTORY_CLASS.getMethod("isProxyClass",
           new Class<?>[] { Class.class });
     } catch (Exception ignore) {
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> Class<T> deProxiedClass(T object) {
+    if (targetFinder != null) {
+      return (Class<T>) targetFinder.findTarget(object).getClass();
+    } else {
+      return deProxy(object.getClass());
     }
   }
 

@@ -27,6 +27,8 @@ import org.modelmapper.internal.MappingEngineImpl;
 import org.modelmapper.internal.util.Assert;
 import org.modelmapper.internal.util.Types;
 
+import static org.modelmapper.internal.util.Types.deProxiedClass;
+
 /**
  * ModelMapper - Performs object mapping, maintains {@link Configuration} and stores {@link TypeMap
  * TypeMaps}.
@@ -560,7 +562,7 @@ public class ModelMapper {
   private <S, D> TypeMap<S, D> createTypeMapInternal(S source, Class<S> sourceType,
       Class<D> destinationType, String typeMapName, Configuration configuration) {
     if (source != null)
-      sourceType = Types.<S>deProxy(source.getClass());
+      sourceType = Types.deProxiedClass(source);
     Assert.state(config.typeMapStore.get(sourceType, destinationType, typeMapName) == null,
         "A TypeMap already exists for %s and %s", sourceType, destinationType);
     return config.typeMapStore.create(source, sourceType, destinationType, typeMapName,
@@ -569,8 +571,8 @@ public class ModelMapper {
 
   private <D> D mapInternal(Object source, D destination, Type destinationType, String typeMapName) {
     if (destination != null)
-      destinationType = Types.<D>deProxy(destination.getClass());
-    return engine.<Object, D>map(source, Types.<Object>deProxy(source.getClass()), destination,
+      destinationType = deProxiedClass(destination);
+    return engine.map(source, Types.deProxiedClass(source), destination,
         TypeToken.<D>of(destinationType), typeMapName);
   }
 }

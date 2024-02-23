@@ -11,7 +11,7 @@
   <packaging>pom</packaging>
   <groupId>org.modelmapper</groupId>
   <artifactId>modelmapper-parent</artifactId>
-  <version>2.4.5</version>
+  <version>2.4.5-beatgrid</version>
   <name>ModelMapper Parent</name>
   <description>Simple, Intelligent, Object Mapping</description>
   <url>http://modelmapper.org</url>
@@ -71,6 +71,23 @@
     </dependency>
   </dependencies>
 
+  <distributionManagement>
+    <repository>
+      <uniqueVersion>false</uniqueVersion>
+      <id>beatgrid-artifactory-release</id>
+      <name>release repository</name>
+      <url>https://artifactory.beatgrid.net/artifactory/libs-release-local</url>
+      <layout>default</layout>
+    </repository>
+    <snapshotRepository>
+      <uniqueVersion>true</uniqueVersion>
+      <id>beatgrid-artifactory-snapshot</id>
+      <name>snapshot repository</name>
+      <url>https://artifactory.beatgrid.net/artifactory/libs-snapshot-local</url>
+      <layout>default</layout>
+    </snapshotRepository>
+  </distributionManagement>
+
   <build>
     <plugins>
       <plugin>
@@ -78,8 +95,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.1</version>
         <configuration>
-          <source>1.6</source>
-          <target>1.6</target>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
       <plugin>
