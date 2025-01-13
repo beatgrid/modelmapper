@@ -35,173 +35,185 @@ import java.util.Date;
  * @author Jonathan Halterman
  */
 public final class Types {
-  private static Class<?> JAVASSIST_PROXY_FACTORY_CLASS;
-  private static Method JAVASSIST_IS_PROXY_CLASS_METHOD;
+    public static volatile ProxyTargetFinder targetFinder = null;
+    private static Class<?> JAVASSIST_PROXY_FACTORY_CLASS;
+    private static Method JAVASSIST_IS_PROXY_CLASS_METHOD;
 
-  static {
-    try {
-      JAVASSIST_PROXY_FACTORY_CLASS = Types.class.getClassLoader().loadClass(
-          "javassist.util.proxy.ProxyFactory");
-      JAVASSIST_IS_PROXY_CLASS_METHOD = JAVASSIST_PROXY_FACTORY_CLASS.getMethod("isProxyClass",
-          new Class<?>[] { Class.class });
-    } catch (Exception ignore) {
-    }
-  }
-
-  /**
-   * Returns the proxied type, if any, else returns the given {@code type}.
-   */
-  @SuppressWarnings("unchecked")
-  public static <T> Class<T> deProxy(Class<?> type) {
-    // Ignore JDK proxies
-    if (type.isInterface())
-      return (Class<T>) type;
-
-    if (isProxied(type)) {
-      final Class<?> superclass = type.getSuperclass();
-      if (!superclass.equals(Object.class) && !superclass.equals(Proxy.class))
-        return (Class<T>) superclass;
-      else {
-        Class<?>[] interfaces = type.getInterfaces();
-        if (interfaces.length > 0)
-          return (Class<T>) interfaces[0];
-      }
+    static {
+        try {
+            JAVASSIST_PROXY_FACTORY_CLASS = Types.class.getClassLoader().loadClass(
+                    "javassist.util.proxy.ProxyFactory");
+            JAVASSIST_IS_PROXY_CLASS_METHOD = JAVASSIST_PROXY_FACTORY_CLASS.getMethod("isProxyClass",
+                    new Class<?>[]{Class.class});
+        } catch (Exception ignore) {
+        }
     }
 
-    return (Class<T>) type;
-  }
-
-  public static boolean isProxied(Class<?> type) {
-    if (type.getName().contains("$ByteBuddy$"))
-      return true;
-    if (type.getName().contains("$$EnhancerBy"))
-      return true;
-    if (type.getName().contains("$HibernateProxy$"))
-      return true;
-    if (type.getName().contains("$MockitoMock$"))
-      return true;
-    if (type.getName().contains("$$Permazen"))
-      return true;
-    if (Proxy.isProxyClass(type))
-      return true;
-    return isProxiedByJavassist(type);
-  }
-
-  private static boolean isProxiedByJavassist(Class<?> type) {
-    try {
-      return JAVASSIST_IS_PROXY_CLASS_METHOD != null
-          && (Boolean) JAVASSIST_IS_PROXY_CLASS_METHOD.invoke(null, type);
-    } catch (Exception ignore) {
+    @SuppressWarnings("unchecked")
+    public static <T> Class<T> deProxiedClass(T object) {
+        if (targetFinder != null) {
+            return (Class<T>) targetFinder.findTarget(object).getClass();
+        } else {
+            return deProxy(object.getClass());
+        }
     }
-    return false;
-  }
 
-  /**
-   * Returns whether the {@code type} is a Groovy type.
-   */
-  public static boolean isGroovyType(Class<?> type) {
-    return type.getName().startsWith("org.codehaus.groovy");
-  }
+    /**
+     * Returns the proxied type, if any, else returns the given {@code type}.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> Class<T> deProxy(Class<?> type) {
+        // Ignore JDK proxies
+        if (type.isInterface())
+            return (Class<T>) type;
 
-  /**
-   * Returns true if the {@code type} is instantiable.
-   */
-  public static boolean isInstantiable(Class<?> type) {
-    return !type.isEnum() && !type.isAssignableFrom(String.class)
-        && !Primitives.isPrimitiveWrapper(type);
-  }
+        if (isProxied(type)) {
+            final Class<?> superclass = type.getSuperclass();
+            if (!superclass.equals(Object.class) && !superclass.equals(Proxy.class))
+                return (Class<T>) superclass;
+            else {
+                Class<?>[] interfaces = type.getInterfaces();
+                if (interfaces.length > 0)
+                    return (Class<T>) interfaces[0];
+            }
+        }
 
-  /**
-   * Returns the raw type for the {@code type}. If {@code type} is a TypeVariable or a WildcardType
-   * then the first upper bound is returned. is returned.
-   *
-   * @throws IllegalArgumentException if {@code type} is not a Class, ParameterizedType,
-   *           GenericArrayType, TypeVariable or WildcardType.
-   */
-  public static Class<?> rawTypeFor(Type type) {
-    if (type instanceof Class<?>) {
-      return (Class<?>) type;
-    } else if (type instanceof ParameterizedType) {
-      return (Class<?>) ((ParameterizedType) type).getRawType();
-    } else if (type instanceof GenericArrayType) {
-      Type componentType = ((GenericArrayType) type).getGenericComponentType();
-      return Array.newInstance(rawTypeFor(componentType), 0).getClass();
-    } else if (type instanceof TypeVariable) {
-      return rawTypeFor(((TypeVariable<?>) type).getBounds()[0]);
-    } else if (type instanceof WildcardType) {
-      return rawTypeFor(((WildcardType) type).getUpperBounds()[0]);
-    } else {
-      String className = type == null ? "null" : type.getClass().getName();
-      throw new IllegalArgumentException("Could not determine raw type for " + className);
+        return (Class<T>) type;
     }
-  }
 
-  /**
-   * Returns a origin class for the ASM {@code type}, else {@code null}.
-   */
-  public static Class<?> classFor(org.objectweb.asm.Type type, ClassLoader classLoader) throws ClassNotFoundException {
-    switch (type.getSort()) {
-      case org.objectweb.asm.Type.BOOLEAN:
-        return Boolean.TYPE;
-      case org.objectweb.asm.Type.CHAR:
-        return Character.TYPE;
-      case org.objectweb.asm.Type.BYTE:
-        return Byte.TYPE;
-      case org.objectweb.asm.Type.SHORT:
-        return Short.TYPE;
-      case org.objectweb.asm.Type.INT:
-        return Integer.TYPE;
-      case org.objectweb.asm.Type.LONG:
-        return Long.TYPE;
-      case org.objectweb.asm.Type.FLOAT:
-        return Float.TYPE;
-      case org.objectweb.asm.Type.DOUBLE:
-        return Double.TYPE;
-      case org.objectweb.asm.Type.ARRAY:
-        return Array.newInstance(classFor(type.getElementType(), classLoader), new int[type.getDimensions()])
-            .getClass();
-      case org.objectweb.asm.Type.OBJECT:
-      default:
-        return Class.forName(type.getClassName(), true, classLoader);
+    public static boolean isProxied(Class<?> type) {
+        if (type.getName().contains("$ByteBuddy$"))
+            return true;
+        if (type.getName().contains("$$EnhancerBy"))
+            return true;
+        if (type.getName().contains("$HibernateProxy$"))
+            return true;
+        if (type.getName().contains("$MockitoMock$"))
+            return true;
+        if (type.getName().contains("$$Permazen"))
+            return true;
+        if (type.getName().contains("$$SpringCGLIB"))
+            return true;
+        if (Proxy.isProxyClass(type))
+            return true;
+        return isProxiedByJavassist(type);
     }
-  }
 
-  /**
-   * Returns a simplified String representation of the {@code member}.
-   */
-  public static String toString(Member member) {
-    if (member instanceof Method) {
-      return member.getDeclaringClass().getName() + "." + member.getName() + "()";
-    } else if (member instanceof Field) {
-      return member.getDeclaringClass().getName() + "." + member.getName();
-    } else if (member instanceof Constructor) {
-      return member.getDeclaringClass().getName() + ".<init>()";
+    private static boolean isProxiedByJavassist(Class<?> type) {
+        try {
+            return JAVASSIST_IS_PROXY_CLASS_METHOD != null
+                    && (Boolean) JAVASSIST_IS_PROXY_CLASS_METHOD.invoke(null, type);
+        } catch (Exception ignore) {
+        }
+        return false;
     }
-    return null;
-  }
 
-  /**
-   * Returns a simplified String representation of the {@code type}.
-   */
-  public static String toString(Type type) {
-    return type instanceof Class ? ((Class<?>) type).getName() : type.toString();
-  }
+    /**
+     * Returns whether the {@code type} is a Groovy type.
+     */
+    public static boolean isGroovyType(Class<?> type) {
+        return type.getName().startsWith("org.codehaus.groovy");
+    }
 
-  /**
-   * Returns whether the type might contains properties or not.
-   */
-  public static boolean mightContainsProperties(Class<?> type) {
-    return type != Object.class
-        && type != String.class
-        && type != Date.class
-        && type != Calendar.class
-        && !Primitives.isPrimitive(type)
-        && !Iterables.isIterable(type)
-        && !Types.isGroovyType(type);
-  }
+    /**
+     * Returns true if the {@code type} is instantiable.
+     */
+    public static boolean isInstantiable(Class<?> type) {
+        return !type.isEnum() && !type.isAssignableFrom(String.class)
+                && !Primitives.isPrimitiveWrapper(type);
+    }
 
-  public static boolean isInternalType(Class<?> type) {
-    String packageName = type.getPackage().getName();
-    return packageName.startsWith("java.");
-  }
+    /**
+     * Returns the raw type for the {@code type}. If {@code type} is a TypeVariable or a WildcardType
+     * then the first upper bound is returned. is returned.
+     *
+     * @throws IllegalArgumentException if {@code type} is not a Class, ParameterizedType,
+     *                                  GenericArrayType, TypeVariable or WildcardType.
+     */
+    public static Class<?> rawTypeFor(Type type) {
+        if (type instanceof Class<?>) {
+            return (Class<?>) type;
+        } else if (type instanceof ParameterizedType) {
+            return (Class<?>) ((ParameterizedType) type).getRawType();
+        } else if (type instanceof GenericArrayType) {
+            Type componentType = ((GenericArrayType) type).getGenericComponentType();
+            return Array.newInstance(rawTypeFor(componentType), 0).getClass();
+        } else if (type instanceof TypeVariable) {
+            return rawTypeFor(((TypeVariable<?>) type).getBounds()[0]);
+        } else if (type instanceof WildcardType) {
+            return rawTypeFor(((WildcardType) type).getUpperBounds()[0]);
+        } else {
+            String className = type == null ? "null" : type.getClass().getName();
+            throw new IllegalArgumentException("Could not determine raw type for " + className);
+        }
+    }
+
+    /**
+     * Returns a origin class for the ASM {@code type}, else {@code null}.
+     */
+    public static Class<?> classFor(org.objectweb.asm.Type type, ClassLoader classLoader) throws ClassNotFoundException {
+        switch (type.getSort()) {
+            case org.objectweb.asm.Type.BOOLEAN:
+                return Boolean.TYPE;
+            case org.objectweb.asm.Type.CHAR:
+                return Character.TYPE;
+            case org.objectweb.asm.Type.BYTE:
+                return Byte.TYPE;
+            case org.objectweb.asm.Type.SHORT:
+                return Short.TYPE;
+            case org.objectweb.asm.Type.INT:
+                return Integer.TYPE;
+            case org.objectweb.asm.Type.LONG:
+                return Long.TYPE;
+            case org.objectweb.asm.Type.FLOAT:
+                return Float.TYPE;
+            case org.objectweb.asm.Type.DOUBLE:
+                return Double.TYPE;
+            case org.objectweb.asm.Type.ARRAY:
+                return Array.newInstance(classFor(type.getElementType(), classLoader), new int[type.getDimensions()])
+                        .getClass();
+            case org.objectweb.asm.Type.OBJECT:
+            default:
+                return Class.forName(type.getClassName(), true, classLoader);
+        }
+    }
+
+    /**
+     * Returns a simplified String representation of the {@code member}.
+     */
+    public static String toString(Member member) {
+        if (member instanceof Method) {
+            return member.getDeclaringClass().getName() + "." + member.getName() + "()";
+        } else if (member instanceof Field) {
+            return member.getDeclaringClass().getName() + "." + member.getName();
+        } else if (member instanceof Constructor) {
+            return member.getDeclaringClass().getName() + ".<init>()";
+        }
+        return null;
+    }
+
+    /**
+     * Returns a simplified String representation of the {@code type}.
+     */
+    public static String toString(Type type) {
+        return type instanceof Class ? ((Class<?>) type).getName() : type.toString();
+    }
+
+    /**
+     * Returns whether the type might contains properties or not.
+     */
+    public static boolean mightContainsProperties(Class<?> type) {
+        return type != Object.class
+                && type != String.class
+                && type != Date.class
+                && type != Calendar.class
+                && !Primitives.isPrimitive(type)
+                && !Iterables.isIterable(type)
+                && !Types.isGroovyType(type);
+    }
+
+    public static boolean isInternalType(Class<?> type) {
+        String packageName = type.getPackage().getName();
+        return packageName.startsWith("java.");
+    }
 }

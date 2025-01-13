@@ -58,6 +58,6 @@ public class TypesTest {
   public void shouldDeProxyDynamicProxy() {
     final Object proxy = Proxy.newProxyInstance(TypesTest.class.getClassLoader(),
             new Class<?>[]{Bar.class}, new NullInvocationHandler());
-    assertEquals(Types.deProxy(proxy.getClass()), Bar.class);
+    assertEquals(Types.deProxiedClass(proxy), Bar.class);
   }
 }
