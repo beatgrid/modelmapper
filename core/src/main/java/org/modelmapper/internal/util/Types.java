@@ -51,11 +51,8 @@ public final class Types {
 
     @SuppressWarnings("unchecked")
     public static <T> Class<T> deProxiedClass(T object) {
-        if (targetFinder != null) {
-            return (Class<T>) targetFinder.findTarget(object).getClass();
-        } else {
-            return deProxy(object.getClass());
-        }
+        final Object target = targetFinder != null ? targetFinder.findTarget(object) : object;
+        return deProxy(target.getClass());
     }
 
     /**
