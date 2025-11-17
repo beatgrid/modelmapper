@@ -4,7 +4,7 @@
   <packaging>pom</packaging>
   <groupId>org.modelmapper</groupId>
   <artifactId>modelmapper-parent</artifactId>
-  <version>3.2.6</version>
+  <version>3.2.6-beatgrid</version>
   <name>ModelMapper Parent</name>
   <description>Simple, Intelligent, Object Mapping</description>
   <url>http://modelmapper.org</url>
@@ -63,6 +63,23 @@
     <system>GitHub</system>
     <url>http://github.com/modelmapper/modelmapper/issues</url>
   </issueManagement>
+
+  <distributionManagement>
+    <repository>
+      <uniqueVersion>false</uniqueVersion>
+      <id>beatgrid-artifactory-release</id>
+      <name>release repository</name>
+      <url>https://artifactory.beatgrid.net/artifactory/libs-release-local</url>
+      <layout>default</layout>
+    </repository>
+    <snapshotRepository>
+      <uniqueVersion>true</uniqueVersion>
+      <id>beatgrid-artifactory-snapshot</id>
+      <name>snapshot repository</name>
+      <url>https://artifactory.beatgrid.net/artifactory/libs-snapshot-local</url>
+      <layout>default</layout>
+    </snapshotRepository>
+  </distributionManagement>
 
   <mailingLists>
     <mailingList>
